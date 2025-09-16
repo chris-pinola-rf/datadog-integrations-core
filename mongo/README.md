@@ -214,6 +214,66 @@ To configure this check for an Agent running on a host:
          authSource: admin
    ```
 
+##### OIDC Workload Identity Authentication
+
+Starting from Datadog Agent v7.XX, the MongoDB integration supports OIDC workload identity authentication for containerized environments. This allows MongoDB authentication using Azure AKS or Google GKE workload identity features without requiring explicit username/password credentials.
+
+To use OIDC workload identity authentication, configure your `mongo.d/conf.yaml` file as follows:
+
+```yaml
+init_config:
+
+instances:
+    ## @param hosts - list of strings - required
+    ## Hosts to collect metrics from
+    #
+  - hosts:
+      - <HOST>:<PORT>
+
+    ## @param oidc_workload_identity - mapping - optional
+    ## Configuration for OIDC workload identity authentication.
+    ## This enables authentication using Azure AKS or Google GKE workload identity
+    ## without requiring explicit username/password credentials.
+    #
+    oidc_workload_identity:
+      ## @param enabled - boolean - required
+      ## Enable OIDC workload identity authentication.
+      #
+      enabled: true
+      
+      ## @param provider - string - required when enabled
+      ## The workload identity provider to use.
+      ## Supported values: azure, aks, gcp, gke, google
+      #
+      provider: azure  # or gcp for Google Cloud
+      
+      ## @param timeout - integer - optional - default: 30
+      ## Timeout in seconds for token acquisition requests.
+      #
+      timeout: 30
+      
+      ## @param auth_source - string - optional
+      ## The authentication database to use for OIDC authentication.
+      ## If not specified, falls back to the main 'database' setting or 'admin'.
+      #
+      auth_source: admin
+
+    ## @param database - string - optional
+    ## The database to collect metrics from.
+    #
+    database: <DATABASE>
+```
+
+**Prerequisites for Azure AKS:**
+- Your pod must be configured with Azure workload identity
+- Environment variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_FEDERATED_TOKEN_FILE` must be set
+- Your MongoDB instance must be configured to accept OIDC authentication from Azure AD
+
+**Prerequisites for Google GKE:**
+- Your pod must be configured with GKE workload identity
+- Your pod must have access to the GCP metadata service
+- Your MongoDB instance must be configured to accept OIDC authentication from Google Cloud
+
 2. [Restart the Agent][6].
 
 ##### Database Autodiscovery

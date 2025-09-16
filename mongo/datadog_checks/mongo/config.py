@@ -81,10 +81,22 @@ class MongoConfig(object):
         self.timeout = float(instance.get('timeout', DEFAULT_TIMEOUT)) * 1000
         self.additional_metrics = instance.get('additional_metrics', [])
 
+        # OIDC workload identity configuration
+        self.oidc_workload_identity = instance.get('oidc_workload_identity', {})
+        self.use_oidc_workload_identity = (
+            self.oidc_workload_identity.get('enabled', False) and
+            self.oidc_workload_identity.get('provider')
+        )
+        
         # Authenticate
         self.do_auth = True
         self.use_x509 = self.tls_params and not self.password
-        if not self.username:
+        
+        # If using OIDC workload identity, enable authentication even without username/password
+        if self.use_oidc_workload_identity:
+            self.log.info("Using OIDC workload identity authentication with provider: %s", 
+                         self.oidc_workload_identity.get('provider'))
+        elif not self.username:
             self.log.info("Disabling authentication because a username was not provided.")
             self.do_auth = False
 

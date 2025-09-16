@@ -1,0 +1,68 @@
+# Example MongoDB configuration for OIDC workload identity authentication
+# This configuration demonstrates how to set up MongoDB monitoring using
+# Azure AKS or Google GKE workload identity for authentication.
+
+init_config:
+
+instances:
+  # Example configuration for Azure AKS workload identity
+  - hosts:
+      - mongodb-cluster.example.com:27017
+
+    # OIDC workload identity configuration for Azure
+    oidc_workload_identity:
+      enabled: true
+      provider: azure  # or 'aks'
+      timeout: 30
+      auth_source: admin  # optional, defaults to 'admin'
+
+    # Database to collect metrics from
+    database: myapp
+
+    # Additional MongoDB connection options
+    options:
+      tls: true
+      tlsAllowInvalidHostnames: false
+
+    # Optional: Custom tags
+    tags:
+      - environment:production
+      - cluster:mongodb-primary
+
+  # Example configuration for Google GKE workload identity
+  - hosts:
+      - mongodb-gke.example.com:27017
+
+    # OIDC workload identity configuration for GCP
+    oidc_workload_identity:
+      enabled: true
+      provider: gcp  # or 'gke' or 'google'
+      timeout: 45
+      auth_source: external
+
+    database: analytics
+
+    options:
+      tls: true
+
+    tags:
+      - environment:staging
+      - cluster:mongodb-analytics
+
+  # Example fallback configuration with standard authentication
+  # (for environments that don't support workload identity)
+  - hosts:
+      - mongodb-legacy.example.com:27017
+
+    # Standard username/password authentication
+    username: datadog_monitor
+    password: secure_password_here
+    database: monitoring
+
+    options:
+      authSource: admin
+      tls: true
+
+    tags:
+      - environment:development
+      - cluster:mongodb-legacy

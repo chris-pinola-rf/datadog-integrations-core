@@ -57,14 +57,21 @@ class MongoApi(object):
             options['replicaSet'] = replicaset
         options.update(self._config.additional_options)
         options.update(self._config.tls_params)
+        
         if self._config.do_auth and self._is_auth_required(options):
             self._log.info("Using '%s' as the authentication database", self._config.auth_source)
-            if self._config.username:
-                options['username'] = self._config.username
-            if self._config.password:
-                options['password'] = self._config.password
-            if self._config.auth_source:
-                options['authSource'] = self._config.auth_source
+            
+            # Handle OIDC workload identity authentication
+            if self._config.use_oidc_workload_identity:
+                self._setup_oidc_workload_identity_auth(options)
+            else:
+                # Standard username/password authentication
+                if self._config.username:
+                    options['username'] = self._config.username
+                if self._config.password:
+                    options['password'] = self._config.password
+                if self._config.auth_source:
+                    options['authSource'] = self._config.auth_source
         self._log.debug("options: %s", options)
         self._cli = MongoClient(**options)
         self.__hostname = None
@@ -148,6 +155,34 @@ class MongoApi(object):
 
     def sharded_data_distribution_stats(self, session=None):
         return self["admin"].aggregate([{"$shardedDataDistribution": {}}], session=session, maxTimeMS=self._timeout)
+
+    def _setup_oidc_workload_identity_auth(self, options):
+        """Setup OIDC workload identity authentication options."""
+        from datadog_checks.mongo.oidc_callbacks import create_oidc_callback
+        
+        provider = self._config.oidc_workload_identity.get('provider')
+        timeout = self._config.oidc_workload_identity.get('timeout', 30)
+        
+        try:
+            # Create the appropriate OIDC callback
+            oidc_callback = create_oidc_callback(provider, timeout=timeout)
+            
+            # Set up OIDC authentication
+            options['authMechanism'] = 'MONGODB-OIDC'
+            options['authMechanismProperties'] = {'OIDC_CALLBACK': oidc_callback}
+            
+            # Set auth source if specified in the workload identity config
+            auth_source = self._config.oidc_workload_identity.get('auth_source')
+            if auth_source:
+                options['authSource'] = auth_source
+            elif self._config.auth_source:
+                options['authSource'] = self._config.auth_source
+                
+            self._log.debug("Configured OIDC workload identity authentication for provider: %s", provider)
+            
+        except Exception as e:
+            self._log.error("Failed to setup OIDC workload identity authentication: %s", e)
+            raise
 
     def _is_auth_required(self, options):
         # Check if the node is an arbiter. If it is, usually it does not require authentication.

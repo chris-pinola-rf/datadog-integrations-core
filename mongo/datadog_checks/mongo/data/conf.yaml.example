@@ -51,6 +51,36 @@ instances:
     #
     # password: <PASSWORD>
 
+    ## @param oidc_workload_identity - mapping - optional
+    ## Configuration for OIDC workload identity authentication.
+    ## This enables authentication using Azure AKS or Google GKE workload identity
+    ## without requiring explicit username/password credentials.
+    ## When enabled, this takes precedence over username/password authentication.
+    #
+    # oidc_workload_identity:
+    
+        ## @param enabled - boolean - optional - default: false
+        ## Enable OIDC workload identity authentication.
+        #
+        # enabled: false
+        
+        ## @param provider - string - required when enabled
+        ## The workload identity provider to use.
+        ## Supported values: azure, aks, gcp, gke, google
+        #
+        # provider: azure
+        
+        ## @param timeout - integer - optional - default: 30
+        ## Timeout in seconds for token acquisition requests.
+        #
+        # timeout: 30
+        
+        ## @param auth_source - string - optional
+        ## The authentication database to use for OIDC authentication.
+        ## If not specified, falls back to the main 'database' setting or 'admin'.
+        #
+        # auth_source: admin
+
     ## @param connection_scheme - string - optional - default: mongodb
     ## Use `mongodb` to identify that this is a string in the standard connection format. This is the default value.
     ## In order to leverage the DNS seed list, use a connection_scheme of `mongodb+srv` rather than the standard
